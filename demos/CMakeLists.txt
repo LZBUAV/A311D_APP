@@ -2,6 +2,7 @@
 FILE (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tengine)
 FILE (COPY ${CMAKE_SOURCE_DIR}/source/api/c_api.h DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/tengine)
 
+set(OpenCV_DIR /home/lzb/personal/project/opencv_arm/opencv-4.5.2/build)
 find_package(OpenCV)
 
 FUNCTION (TENGINE_DEMO name)
@@ -34,6 +35,7 @@ if(OpenCV_FOUND)
     TENGINE_DEMO (demo_scrfd_camera     demo_scrfd_camera.cc     algorithm/scrfd.cc utilities/letterbox.cc utilities/permute.cc utilities/nms.cc utilities/iou.cc utilities/timer.cc)
     TENGINE_DEMO (demo_scrfd_image      demo_scrfd_image.cc      algorithm/scrfd.cc utilities/letterbox.cc utilities/permute.cc utilities/nms.cc utilities/iou.cc utilities/timer.cc)
     TENGINE_DEMO (demo_arcface_image    demo_arcface_image.cc    algorithm/scrfd.cc algorithm/arcface.cc utilities/permute.cc utilities/timer.cc utilities/affine.cc utilities/letterbox.cc utilities/nms.cc utilities/iou.cc utilities/distance.cc)
+    TENGINE_DEMO (face_reg_pipeline     face_reg_pipeline.cpp    algorithm/scrfd.cc algorithm/arcface.cc utilities/permute.cc utilities/timer.cc utilities/affine.cc utilities/letterbox.cc utilities/nms.cc utilities/iou.cc utilities/distance.cc)
     TENGINE_DEMO (demo_scrfd_list       demo_scrfd_list.cc       algorithm/scrfd.cc utilities/letterbox.cc utilities/iou.cc utilities/nms.cc utilities/permute.cc utilities/timer.cc)
     TENGINE_DEMO (demo_arcface_list     demo_arcface_list.cc     algorithm/arcface.cc utilities/affine.cc utilities/distance.cc utilities/permute.cc utilities/timer.cc)
     TENGINE_DEMO (demo_centerface_image demo_centerface_image.cc algorithm/centerface.cc utilities/letterbox.cc utilities/permute.cc utilities/nms.cc utilities/iou.cc utilities/timer.cc)
