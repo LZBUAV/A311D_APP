@@ -49,11 +49,8 @@ IF (NOT CMAKE_BUILD_TYPE)
 ENDIF()
 
 # Module options
-OPTION (TENGINE_BUILD_BENCHMARK             "Build benchmark"                           ON)
 OPTION (TENGINE_BUILD_EXAMPLES              "Build examples"                            ON)
 OPTION (TENGINE_BUILD_DEMO                  "Build demos"                               ON)
-OPTION (TENGINE_BUILD_TESTS                 "Build tests"                               OFF)
-OPTION (TENGINE_BUILD_CPP_API               "Build C++ API"                             OFF)
 
 # Tools options
 # Tools
@@ -114,20 +111,12 @@ ADD_SUBDIRECTORY (source)
 # Internal modules, not for open source part
 INCLUDE (internal/extension.cmake OPTIONAL)
 
-IF (TENGINE_BUILD_BENCHMARK)
-    ADD_SUBDIRECTORY(benchmark)
-ENDIF()
-
 IF (TENGINE_BUILD_EXAMPLES)
     ADD_SUBDIRECTORY(examples)
 ENDIF()
 
 IF (TENGINE_BUILD_DEMO)
     ADD_SUBDIRECTORY(demos)
-ENDIF()
-
-IF (TENGINE_BUILD_TESTS)
-    ADD_SUBDIRECTORY(tests)
 ENDIF()
 
 IF (TENGINE_BUILD_QUANT_TOOL)

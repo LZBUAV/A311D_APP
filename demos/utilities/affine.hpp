@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "types.hpp"
+#include "common/types.hpp"
 
 #include <opencv2/opencv.hpp>
 

@@ -1,2 +1,0 @@
-# Python Complete Example
-

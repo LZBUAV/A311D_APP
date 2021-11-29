@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "types.hpp"
+#include "common/types.hpp"
 
 #include "yolo_layer.hpp"
 #include "tengine/c_api.h"
