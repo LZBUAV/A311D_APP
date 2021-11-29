@@ -113,7 +113,7 @@ bool recognition::load(const std::string &model, const std::string &device)
     opt.cluster = TENGINE_CLUSTER_ALL;
     opt.affinity = 0;
     opt.num_thread = 4;
-    opt.precision = TENGINE_DT_FP32;
+    opt.precision = tensor_type;
 
     ret = prerun_graph_multithread(this->graph, opt);
     if (0 != ret)
@@ -254,7 +254,8 @@ bool recognition::get_feature_std(const cv::Mat &image, std::vector<float> &feat
 
 	Timer timer;
     int flag = run_graph(this->graph, 1);
-    fprintf(stdout, "Cost %.2fms", timer.Cost());
+    // fprintf(stdout, "Cost %.2fms", timer.Cost());
+    std::cout << std::endl;
     if (0 != flag)
     {
         fprintf(stderr, "Run graph failed.\n");
