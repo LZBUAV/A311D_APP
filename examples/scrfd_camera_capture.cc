@@ -48,7 +48,7 @@ const float NMS_THRESHOLD   =   0.45f;
 const int MODEL_WIDTH       =   160;
 const int MODEL_HEIGHT      =   96;
 
-#define MODEL_PATH  "/etc/models/scrfd_2.5g_bnkps.tmfile"
+#define MODEL_PATH  "/lzb/models/scrfd_2.5g_bnkps.tmfile"
 
 int main(int argc, char* argv[])
 {
