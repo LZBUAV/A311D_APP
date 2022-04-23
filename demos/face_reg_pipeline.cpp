@@ -30,24 +30,24 @@
 #include <algorithm>
 #include <numeric>
 
-const float DET_THRESHOLD   =   0.30f;
-const float NMS_THRESHOLD   =   0.45f;
+const float DET_THRESHOLD   =   0.5f;
+const float NMS_THRESHOLD   =   0.15f;
 
-const int MODEL_WIDTH       =   160;
-const int MODEL_HEIGHT      =   96;
+const int MODEL_WIDTH       =   640;
+const int MODEL_HEIGHT      =   640;
 
 void show_usage()
 {
     std::cout << "-h, help" << std::endl;
-    std::cout << "-d, the face detect model path. default: /lzb/models/scrfd_2.5g_bnkps.tmfile" << std::endl;
-    std::cout << "-r, the face recongnition model path. default: /lzb/models/mobilefacenet_simply.tmfile" << std::endl;
+    std::cout << "-d, the face detect model path. default: /lzb/models/scrfd_2.5g_bnkps_uint8.tmfile" << std::endl;
+    std::cout << "-r, the face recongnition model path. default: /lzb/models/mobilefacenet_simply_uint8.tmfile" << std::endl;
     std::cout << "-f, the face feature bank path. default: /lzb/facebank/feature_average.txt" << std::endl;
     std::cout << "-a, the new added face feature store path." << std::endl;
     std::cout << "uasge1: ./face_reg_pipeline" << std::endl;
     std::cout << "uasge2: ./face_reg_pipeline -u 1" << std::endl;
-    std::cout << "uasge3: ./face_reg_pipeline -d /lzb/models/scrfd_2.5g_bnkps.tmfile -r /lzb/models/mobilefacenet_simply.tmfile -f /lzb/facebank/feature_average.txt" << std::endl;
-    std::cout << "uasge4: ./face_reg_pipeline -d /lzb/models/scrfd_2.5g_bnkps.tmfile -r /lzb/models/mobilefacenet_simply.tmfile -f /lzb/facebank/feature_average.txt" << std::endl;
-    std::cout << "uasge5: ./face_reg_pipeline -d /lzb/models/scrfd_2.5g_bnkps.tmfile -r /lzb/models/mobilefacenet_simply.tmfile -f /lzb/facebank/feature_average.txt -a /lzb/facebank/new_feature.txt" << std::endl;
+    std::cout << "uasge3: ./face_reg_pipeline -d /lzb/models/scrfd_2.5g_bnkps_uint8.tmfile -r /lzb/models/mobilefacenet_simply_uint8.tmfile -f /lzb/facebank/feature_average.txt" << std::endl;
+    std::cout << "uasge4: ./face_reg_pipeline -d /lzb/models/scrfd_2.5g_bnkps_uint8.tmfile -r /lzb/models/mobilefacenet_simply_uint8.tmfile -f /lzb/facebank/feature_average.txt" << std::endl;
+    std::cout << "uasge5: ./face_reg_pipeline -d /lzb/models/scrfd_2.5g_bnkps_uint8.tmfile -r /lzb/models/mobilefacenet_simply_uint8.tmfile -f /lzb/facebank/feature_average.txt -a /lzb/facebank/new_feature.txt" << std::endl;
     std::cout << "uasge6: ./face_reg_pipeline -a /lzb/facebank/new_feature.txt" << std::endl;
 }
 
@@ -56,8 +56,8 @@ int main(int argc, char* argv[])
 
     cmdline::parser cmd;
 
-    cmd.add<std::string>("detect_model", 'd', "detection model file", false, "/lzb/models/scrfd_2.5g_bnkps.tmfile");
-    cmd.add<std::string>("recongnition_model", 'r', "recongnition_model model file", false, "/lzb/models/mobilefacenet_simply.tmfile");
+    cmd.add<std::string>("detect_model", 'd', "detection model file", false, "/lzb/models/scrfd_2.5g_bnkps_uint8.tmfile");
+    cmd.add<std::string>("recongnition_model", 'r', "recongnition_model model file", false, "/lzb/models/mobilefacenet_simply_uint8.tmfile");
     cmd.add<std::string>("face_bank_path", 'f', "face bank file", false, "/lzb/facebank/feature_average.txt");
     cmd.add<std::string>("add_face", 'a', "new feature store path", false, "");
     cmd.add<std::string>("usage", 'u', "usage", false, "");
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    auto device = std::string("CPU");
+    auto device = std::string("TIMVX");
     auto score_threshold = DET_THRESHOLD;
     auto iou_threshold = NMS_THRESHOLD;
 
@@ -103,7 +103,7 @@ int main(int argc, char* argv[])
         printf("Failed\n");
         return -1;
     }
-    printf("Done\n");
+    printf("Initing camera Done\n");
 
     cv::Mat image_ori;
     vp >> image_ori;
@@ -115,7 +115,6 @@ int main(int argc, char* argv[])
     }
 
     printf(">>> Loading scrfd graph...\n");
-
     cv::Size input_shape(MODEL_WIDTH, MODEL_HEIGHT);
     SCRFD detector;
     auto ret = detector.Load(det_model_path, input_shape, device.c_str());
@@ -124,8 +123,10 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Load model(%s) failed.\n", det_model_path.c_str());
         return -1;
     }
+    printf(">>> Load scrfd graph successfully\n");
     std::vector<Face> faces;
     
+    printf(">>> Loading arcface graph...\n");
     recognition reg;
     ret = reg.load(reg_model_path, device);
     if (!ret)
@@ -133,6 +134,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Load verify model(%s) failed.\n", reg_model_path.c_str());
         return -1;
     }
+    printf(">>> Load arcface graph successfully\n");
     std::vector<float> feature;
 
     //获取注册过的人脸特征
@@ -232,7 +234,7 @@ int main(int argc, char* argv[])
                     max_index = i;
                 }
             }
-            // std::cout << "max_distance" << " " << max_distance_cosin << std::endl;
+            std::cout << "max_distance" << " " << max_distance_cosin << std::endl;
 
             // box
             cv::Rect2f rect(face.box.x, face.box.y, face.box.width, face.box.height);

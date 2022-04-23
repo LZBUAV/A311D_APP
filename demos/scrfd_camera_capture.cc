@@ -42,13 +42,13 @@
 #include <opencv2/opencv.hpp>
 
 
-const float DET_THRESHOLD   =   0.3f;
-const float NMS_THRESHOLD   =   0.45f;
+const float DET_THRESHOLD   =   0.5f;
+const float NMS_THRESHOLD   =   0.15f;
 
-const int MODEL_WIDTH       =   160;
-const int MODEL_HEIGHT      =   96;
+const int MODEL_WIDTH       =   640;
+const int MODEL_HEIGHT      =   640;
 
-#define MODEL_PATH  "/lzb/models/scrfd_2.5g_bnkps.tmfile"
+#define MODEL_PATH  "/lzb/models/scrfd_2.5g_bnkps_uint8.tmfile"
 
 int main(int argc, char* argv[])
 {
@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
     printf("Done\n");
 
     auto model_path = std::string(MODEL_PATH);
-    auto device = std::string("CPU");
+    auto device = std::string("TIMVX");
     auto score_threshold = DET_THRESHOLD;
     auto iou_threshold = NMS_THRESHOLD;
 
@@ -105,17 +105,18 @@ int main(int argc, char* argv[])
 
     std::vector<Face> faces;
 
+    float FPS = 0.0;
     while (true)
     {
+        Timer total_timer;
+
         vp >> image_ori;
 
-        Timer det_timer;
         detector.Detect(image_ori, faces, score_threshold, iou_threshold);
-        det_timer.Stop();
 
         for (auto& face : faces)
         {
-            fprintf(stderr, "%.5f at %.2f %.2f %.2f x %.2f\n", face.confidence, face.box.x, face.box.y, face.box.width, face.box.height);
+            fprintf(stderr, "%.5f at %.2f %.2f %.2f x %.2f FPS: %.6f\n", face.confidence, face.box.x, face.box.y, face.box.width, face.box.height, FPS);
 
             // box
             cv::Rect2f rect(face.box.x, face.box.y, face.box.width, face.box.height);
@@ -132,6 +133,8 @@ int main(int argc, char* argv[])
             cv::circle(image_ori, cv::Point(face.landmark[4].x, face.landmark[4].y), 2, cv::Scalar(255, 255, 0), -1);
         }
 
+        cv::putText(image_ori, "FPS: " + std::to_string(FPS).substr(0, 6), cv::Point2f(30, 50), cv::FONT_HERSHEY_TRIPLEX, 1.5f, cv::Scalar(0, 0, 255), 2, 4);
+
         cv::Mat fb_frame;
 
         cv::resize(image_ori, fb_frame, cv::Size(1024,600));
@@ -143,6 +146,8 @@ int main(int argc, char* argv[])
             // ofs.seekp(y*1024*2);
             write(fb_fd,(char *)fb_frame.ptr(y), 1024 * 2);
         }
+
+        FPS = 1000.0/total_timer.Cost();
     }
 
     release_tengine();

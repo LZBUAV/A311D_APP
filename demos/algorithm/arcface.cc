@@ -46,7 +46,7 @@ bool recognition::load(const std::string &model, const std::string &device)
         return false;
     }
 
-    this->context = create_context("ctx", 1);
+    this->context = create_context("dev_reg", 1);
     if (!device.empty())
     {
         ret = set_context_device(context, device.c_str(), nullptr, 0);
@@ -112,7 +112,7 @@ bool recognition::load(const std::string &model, const std::string &device)
     options_t opt = { 0 };
     opt.cluster = TENGINE_CLUSTER_ALL;
     opt.affinity = 0;
-    opt.num_thread = 4;
+    opt.num_thread = 6;
     opt.precision = tensor_type;
 
     ret = prerun_graph_multithread(this->graph, opt);

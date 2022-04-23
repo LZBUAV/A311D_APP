@@ -23,7 +23,7 @@
  */
 
 #include "permute.hpp"
-
+//NHWC->NCHW
 bool permute(const cv::Mat& src, cv::Mat& dst, bool swap_rb)
 {
     if (src.empty() || dst.empty() || dst.data == src.data || dst.rows != src.rows || dst.cols != src.cols)

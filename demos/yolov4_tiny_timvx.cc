@@ -364,7 +364,7 @@ int main(int argc, char* argv[])
 
     /* create graph, load tengine model xxx.tmfile */
     printf(">>> Loading graph...");
-    graph_t graph = create_graph(timvx_context, "tengine", "/etc/models/yolov4-tiny_uint8.tmfile");
+    graph_t graph = create_graph(timvx_context, "tengine", "/lzb/models/yolov4-tiny_uint8.tmfile");
     if (graph == nullptr)
     {
         printf("Failed\n");

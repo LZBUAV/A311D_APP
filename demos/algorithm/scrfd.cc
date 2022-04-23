@@ -31,11 +31,11 @@
 
 #include <cmath>
 
-//#define _DEBUG_
+// #define _DEBUG_
 
 
-const float DEFAULT_SCORE_THRESHOLD = 0.45f;
-const float DEFAULT_NMS_THRESHOLD = 0.3f;
+const float DEFAULT_SCORE_THRESHOLD = 0.5f;
+const float DEFAULT_NMS_THRESHOLD = 0.15f;
 
 const float MODEL_MEANS[]  = { 127.5f, 127.5f, 127.5f };
 const float MODEL_SCALES[] = { 1 / 128.f, 1 / 128.f, 1 / 128.f };
@@ -89,7 +89,7 @@ bool SCRFD::Load(const std::string& model, const cv::Size& input_shape, const st
     this->score_threshold = DEFAULT_SCORE_THRESHOLD;
     this->nms_threshold   = DEFAULT_NMS_THRESHOLD;
 
-    this->context = create_context("ctx", 1);
+    this->context = create_context("dev_det", 1);
 
     if (!device.empty())
     {
@@ -108,6 +108,21 @@ bool SCRFD::Load(const std::string& model, const cv::Size& input_shape, const st
         return false;
     }
 
+    options_t opt;
+    opt.cluster = TENGINE_CLUSTER_ALL;
+    opt.affinity = 0;
+    opt.num_thread = 6;
+    opt.precision = TENGINE_MODE_UINT8;
+
+    auto ret = prerun_graph_multithread(this->graph, opt);
+    if (0 != ret)
+    {
+        fprintf(stderr, "Pre-run graph failed.\n");
+        return false;
+    }
+
+    dump_graph(this->graph);
+
     auto canvas_ret = init_canvas(this->canvas_width, this->canvas_height, 3);
     if (!canvas_ret)
     {
@@ -115,15 +130,6 @@ bool SCRFD::Load(const std::string& model, const cv::Size& input_shape, const st
         return false;
     }
 
-    Timer timer;
-    auto ret = prerun_graph(this->graph);
-    if (0 != ret)
-    {
-        fprintf(stdout, "Prerun graph failed(%d).", ret);
-        return false;
-    }
-
-    dump_graph(this->graph);
 
     auto buffer_ret = init_buffer();
     if (!buffer_ret)
@@ -181,12 +187,17 @@ bool SCRFD::init_canvas(int width, int height, int channel)
     }
     else
     {
+        this->is_quantization = true;
         ret = set_tensor_buffer(input_tensor, this->canvas_uint8.data(), (int)(this->canvas_uint8.size() * sizeof(uint8_t)));
         if (0 != ret)
         {
             fprintf(stderr, "Set input tensor buffer failed.\n");
             return false;
         }
+        fprintf(stderr, "Set input tensor buffer canvas_uint8.\n");
+
+        get_tensor_quant_param(input_tensor, &(this->input_scale), &(this->input_zp), 1);
+
     }
 
     return true;
@@ -232,8 +243,6 @@ bool SCRFD::init_buffer()
         auto tensor_type = get_tensor_data_type(score_tensor);
         if (TENGINE_DT_FP32 != tensor_type)
         {
-            this->is_quantization = true;
-
             auto score_ret    = get_tensor_quant_param(score_tensor, &(this->score_scale[i]), &(this->score_zp[i]), 1);
             auto bbox_ret     = get_tensor_quant_param(bbox_tensor, &(this->bbox_scale[i]), &(this->bbox_zp[i]), 1);
             auto landmark_ret = get_tensor_quant_param(landmark_tensor, &(this->landmark_scale[i]), &(this->landmark_zp[i]), 1);
@@ -331,7 +340,7 @@ bool SCRFD::init_anchor()
                 auto rs_w = r_w * scale;
                 auto rs_h = r_h * scale;
 
-                std::array<float, 4> point = { cx - rs_w * 0.5f, cx - rs_h * 0.5f, cx + rs_w * 0.5f, cx + rs_h * 0.5f };
+                std::array<float, 4> point = { cx - rs_w * 0.5f, cy - rs_h * 0.5f, cx + rs_w * 0.5f, cy + rs_h * 0.5f };
 
                 auto offset = j * this->scales.size() + k;
                 anchor[offset] = point;
@@ -378,10 +387,10 @@ bool SCRFD::pre(const cv::Mat &image)
             }
         }
     }
-    cv::Mat image_resized_permute_test(this->canvas_height, this->canvas_width, CV_8UC(image.channels()), buffer.data());
-    cv::imwrite("test_permute_mat.bmp", image_resized_permute_test);
-    cv::Mat image_resized_permute_test(this->canvas_height, this->canvas_width, CV_8UC(image.channels()), this->resized_permute_container.data());
-    cv::imwrite("test_permute_buffer.bmp", image_resized_permute_test);
+    cv::Mat image_resized_permute_test1(this->canvas_height, this->canvas_width, CV_8UC(image.channels()), buffer.data());
+    cv::imwrite("test_permute_mat.bmp", image_resized_permute_test1);
+    cv::Mat image_resized_permute_test2(this->canvas_height, this->canvas_width, CV_8UC(image.channels()), this->resized_permute_container.data());
+    cv::imwrite("test_permute_buffer.bmp", image_resized_permute_test2);
 #endif
 
     tensor_t input_tensor = get_graph_input_tensor(this->graph, 0, 0);
@@ -437,7 +446,7 @@ bool SCRFD::pre(const cv::Mat &image)
         cv::Mat model_input_buffer(this->canvas_height, this->canvas_width, CV_32FC(image.channels()), this->canvas_float.data());
         cv::Mat model_input_tensor(this->canvas_height, this->canvas_width, CV_32FC(image.channels()), model_input_ptr);
         cv::imwrite("test_input_buffer.bmp", model_input_buffer);
-        cv::imwrite("test_input_tensor.bmp", model_input_tensor);
+        cv::imwrite("test_input_tensor.bmp", model_input_tensor);   
     }
     else
     {
@@ -488,17 +497,17 @@ bool SCRFD::post(std::vector<Face>& boxes)
 
             for (size_t j = 0; j < this->score_buffer[i].size(); j++)
             {
-                this->score_buffer[i][j] = (float)((int)score_uint8_ptr[j] - this->score_zp[i]) * this->score_scale[i];
+                this->score_buffer[i][j] = (float)((float)score_uint8_ptr[j] - (float)this->score_zp[i]) * this->score_scale[i];
             }
 
             for (size_t j = 0; j < this->bbox_buffer[i].size(); j++)
             {
-                this->bbox_buffer[i][j] = (float)((int)bbox_uint8_ptr[j] - this->bbox_zp[i]) * this->bbox_scale[i];
+                this->bbox_buffer[i][j] = (float)((float)bbox_uint8_ptr[j] - (float)this->bbox_zp[i]) * this->bbox_scale[i];
             }
 
             for (size_t j = 0; j < this->landmark_buffer[i].size(); j++)
             {
-                this->landmark_buffer[i][j] = (float)((int)landmark_uint8_ptr[j] - this->landmark_zp[i]) * this->landmark_scale[i];
+                this->landmark_buffer[i][j] = (float)((float)landmark_uint8_ptr[j] - (float)this->landmark_zp[i]) * this->landmark_scale[i];
             }
         }
         else
@@ -585,6 +594,7 @@ bool SCRFD::post(std::vector<Face>& boxes)
                         proposal.confidence = score;
                         proposal.box.x = std::min(x0, x1) * this->input_ratio;
                         proposal.box.y = std::min(y0, y1) * this->input_ratio;
+
                         proposal.box.width = std::abs(x1 - x0) * this->input_ratio;
                         proposal.box.height = std::abs(y1 - y0) * this->input_ratio;
 
